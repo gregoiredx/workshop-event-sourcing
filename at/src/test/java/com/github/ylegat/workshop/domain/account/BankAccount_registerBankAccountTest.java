@@ -1,55 +1,39 @@
 package com.github.ylegat.workshop.domain.account;
 
+import com.github.ylegat.workshop.domain.common.ConflictingEventException;
+import org.assertj.core.api.Assertions;
+import org.junit.Before;
+import org.junit.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static com.github.ylegat.workshop.domain.account.BankAccount.registerBankAccount;
 import static org.assertj.core.api.Fail.fail;
-import org.junit.Test;
-import com.github.ylegat.workshop.domain.common.ConflictingEventException;
 
 public class BankAccount_registerBankAccountTest extends AbstractBankAccountTesting {
 
+    private String bankAccountId;
+
+    @Before
+    public void setUp() {
+        bankAccountId = "aBankAccountId";
+    }
+
     @Test
     public void should_register_bank_account_with_success() {
-        fail("Not implemented");
-        // When
-        /*
-          when a bank account is registered (BankAccount.registerBankAccount)
-         */
+        BankAccount bankAccount = BankAccount.registerBankAccount(bankAccountId, eventStore);
 
-        // Then
-        /*
-          1. assert that the events associated to the bank account contains exactly one BankAccountRegistered event (use assertThatEvents method defined in the superclass)
-          * assertThatEvents(...).containsExactly(...)
-          2. the test fails, implement BankAccount.registerBankAccount decision function
-          3. assert on the state of the bank account (you can use Assertion.assertThat(actualBankAccount).isEqualTo(expectedBankAccount)) :
-          * it's id should be identical to the one created
-          * its credit should be equal to 0
-          * its version should be 1 (one event has been applied on the bank account)
-          4. the test fails, implement BankAccount.innerEventListener.on(BankAccountRegistered) evolution function
-         */
+        assertThatEvents(bankAccountId).containsExactly(new BankAccountRegistered(bankAccountId));
+        assertThat(bankAccount).isEqualTo(new BankAccount(bankAccountId, eventStore, 0, 1));
     }
 
     @Test
     public void should_fail_registering_bank_account_with_already_used_id() {
-        fail("Not implemented");
-        // Given
-        /*
-          Given a bank account registered (BankAccount.registerBankAccount)
-         */
+        BankAccount.registerBankAccount(bankAccountId, eventStore);
 
-        // When
-        /*
-          When a bank account with the same id is registered (use Assertions.catchThrowable(() -> BankAccount.registerBankAccount(...)) to catch the exception)
-          * Throwable throwable = Assertions.catchThrowable(() -> BankAccount.registerBankAccount(...))
-         */
+        Throwable throwable = catchThrowable(() -> BankAccount.registerBankAccount(bankAccountId, eventStore));
 
-        // Then
-        /*
-          1. assert that the command thrown a ConflictingEventException exception
-          * Assertions.assertThat(throwable).isInstanceOf(ConflictingEventException.class)
-          2. assert that the events associated to the bank account contains exactly one BankAccountRegistered event
-         */
+        assertThat(throwable).isInstanceOf(ConflictingEventException.class);
+        assertThatEvents(bankAccountId).containsExactly(new BankAccountRegistered(bankAccountId));
     }
 
 }
