@@ -40,6 +40,8 @@ public class TransferProcessManager implements ProcessManager {
           3. if it does not exist, load the transfer origin account and send a command to cancel the transfer
           4. if the origin account does not exist, or if any exception is thrown by any command, log an error
          */
+        Optional<BankAccount> destination = BankAccount.loadBankAccount(transferRequested.bankAccountIdDestination, eventStore);
+        destination.get().receiveTransfer(transferRequested.aggregateId, transferRequested.transferId, transferRequested.creditTransferred);
     }
 
     @Override
@@ -49,6 +51,9 @@ public class TransferProcessManager implements ProcessManager {
           2. if the account exists, send a command to complete the transfer
           3. if the account does not exist, or if any exception is thrown by any command, log an error
          */
+        Optional<BankAccount> origin = BankAccount.loadBankAccount(transferReceived.bankAccountIdOrigin, eventStore);
+        origin.get().completeTransfer(transferReceived.transferId);
+
     }
 
     @Override

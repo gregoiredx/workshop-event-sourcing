@@ -5,56 +5,51 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TransferProcessManagerTest extends AbstractBankAccountTesting {
 
-    @Test
-    public void should_cancel_transfer_when_destination_does_not_exist() {
-        fail("Not implemented");
+    private TransferProcessManager transferProcessManager;
+    private BankAccount origin;
 
-        // Given
-        /*
-          1. a transfer process manager registered with the event bus (the event bus is accessible from the superclass)
-          2. a registration of the process manager into the event bus (super.eventBus.register(...))
-          3. a bank account ("origin") registered and provisioned with 1 credit
-         */
-
-        // When
-        /*
-          when a transfer is initialized from "origin" to a non registered bank account id
-         */
-
-        // Then
-        /*
-          1. Wait for the event bus to process events
-          2. "origin" events should contains exactly 1 BankAccountRegistered, 1 CreditProvisioned, 1 TransferRequested and 1 TransferCanceled
-         */
+    @Before
+    public void setUp() throws Exception {
+        transferProcessManager = new TransferProcessManager(eventStore);
+        eventBus.register(transferProcessManager);
+        origin = registerBankAccount("origin", eventStore);
+        origin.provisionCredit(1);
     }
 
     @Test
-    public void should_complete_transfer_when_destination_exist() {
-        fail("Not implemented");
+    public void should_cancel_transfer_when_destination_does_not_exist() throws InterruptedException {
+        String transfer = origin.requestTransfer("nonRegisteredAccount", 1);
 
-        // Given
-        /*
-          1. a transfer process manager registered with the event bus (the event bus is accessible from the superclass)
-          2. a registration of the process manager into the event bus (super.eventBus.register(...))
-          3. a bank account ("origin") registered and provisioned with 1 credit
-          4. a bank account ("destination") registered
-         */
+        Thread.sleep(100);
+        assertThatEvents("origin").containsExactly(
+                new BankAccountRegistered("origin"),
+                new CreditProvisioned("origin", 1, 1),
+                new TransferRequested("origin", transfer, "nonRegisteredAccount", 1, 0)
+        );
+    }
 
-        // When
-        /*
-          when a transfer is requested from "origin" to "destination"
-         */
+    @Test
+    public void should_complete_transfer_when_destination_exist() throws InterruptedException {
+         registerBankAccount("destination", eventStore);
 
-        // Then
-        /*
-         1. Wait for the event bus to process events
-         2. "origin" events should contain exactly 1 BankAccountRegistered, 1 CreditProvisioned, 1 TransferRequested and 1 TransferCompleted
-         3. "destinations" events should contain exactly 1 BankAccountRegistered and 1 TransferReceived
-         */
+        String transfer = origin.requestTransfer("destination", 1);
+
+        Thread.sleep(100);
+        assertThatEvents("origin").containsExactly(
+                new BankAccountRegistered("origin"),
+                new CreditProvisioned("origin", 1, 1),
+                new TransferRequested("origin", transfer, "destination", 1, 0),
+                new TransferCompleted("origin", transfer, "destination")
+        );
+        assertThatEvents("destination").containsExactly(
+                new BankAccountRegistered("destination"),
+                new TransferReceived("destination", transfer, "origin", 1, 1)
+        );
     }
 
 }

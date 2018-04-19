@@ -106,7 +106,11 @@ public class BankAccount {
 
     @DecisionFunction
     public String requestTransfer(String bankAccountDestinationId, int creditToTransfer) {
+        if(bankAccountDestinationId.equals(id) || creditToTransfer > creditBalance){
+            throw new InvalidCommandException();
+        }
         String randomTransferId = generateTransferId();
+        TransferRequested event = new TransferRequested(id, randomTransferId, bankAccountDestinationId, creditToTransfer, creditBalance - creditToTransfer);
         /*
           1. throw an InvalidCommandException if the bank destination id is the same that this id
           2. throw an InvalidCommandException if the balance is lower then the credit amount to transfer
@@ -115,7 +119,9 @@ public class BankAccount {
           5. apply saved events on the bank account savedEvents.foreach(this::applyEvent)
           6. return the transfer id associated the the transfer
          */
-        return null;
+        eventStore.save(version, event);
+        applyEvent(event);
+        return randomTransferId;
     }
 
     @DecisionFunction
@@ -223,6 +229,9 @@ public class BankAccount {
               2. add the event to the pending transfers map
               3. increment the aggregate's version
              */
+            creditBalance = transferRequested.newCreditBalance;
+            pendingTransfers.put(transferRequested.transferId, transferRequested);
+            version++;
         }
 
         @Override
